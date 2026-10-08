@@ -12,7 +12,8 @@
     "test": "vitest run",
     "brain": "node --env-file-if-exists=../.env scripts/brain-check.js",
     "collect": "node --env-file-if-exists=../.env scripts/collect-check.js",
-    "search": "node --env-file-if-exists=../.env scripts/search-check.js"
+    "search": "node --env-file-if-exists=../.env scripts/search-check.js",
+    "models": "node --env-file-if-exists=../.env scripts/models.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
