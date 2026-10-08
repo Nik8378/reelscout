@@ -10,7 +10,8 @@
     "dev": "node --watch --env-file-if-exists=../.env src/server.js",
     "start": "node --env-file-if-exists=../.env src/server.js",
     "test": "vitest run",
-    "brain": "node --env-file-if-exists=../.env scripts/brain-check.js"
+    "brain": "node --env-file-if-exists=../.env scripts/brain-check.js",
+    "collect": "node --env-file-if-exists=../.env scripts/collect-check.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
@@ -25,6 +26,7 @@
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "pino-pretty": "^13.2.0",
+    "playwright": "^1.64.0",
     "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
