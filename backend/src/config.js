@@ -13,8 +13,6 @@ const schema = z.object({
   VERIFY_BUDGET_MS: z.coerce.number().default(90000),
   CLIP_MODEL: z.string().default('Xenova/clip-vit-base-patch32'),
   APIFY_TOKEN: z.string().default(''),
-  RAPIDAPI_KEY: z.string().default(''),
-  RAPIDAPI_IG_HOST: z.string().default(''),
   ENABLE_TIKTOK: z
     .string()
     .default('true')
