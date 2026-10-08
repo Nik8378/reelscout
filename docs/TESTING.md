@@ -55,4 +55,4 @@ Also verified: a **fresh clone** of the GitHub repo installs, passes all 32 test
 | 12 | Type `http://localhost:4000` as the product link | Blocked before any fetch, with a clear red notice ("Only standard web ports are allowed" / "Internal addresses are blocked") | ✅ |
 | 13 | Stop the backend and refresh | "Backend not reachable" banner | ✅ |
 | 14 | Phone, tablet, laptop and desktop widths (Chrome device toolbar) | Filters fold behind a Filters button; no sideways scroll | ✅ |
-| 15 | `docker compose up --build` | App on http://localhost:8080 | ⬜ |
+| 15 | `docker compose up --build` (tested on an Apple-silicon Mac) | App on http://localhost:8080: full search with Instagram, Meta, TikTok, CLIP and Gemini inside Docker | ✅ |
