@@ -1,0 +1,7 @@
+[
+  { "q": "protein bar", "note": "keyword, food" },
+  { "q": "oversized graphic tee", "note": "keyword, apparel" },
+  { "q": "vitamin c face serum", "note": "keyword, skincare" },
+  { "q": "PASTE_AN_AMAZON_PRODUCT_URL_HERE", "note": "Amazon product link" },
+  { "q": "https://www.allbirds.com/products/mens-tree-runners", "note": "Shopify product link" }
+]

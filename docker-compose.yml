@@ -1,0 +1,22 @@
+# One command: docker compose up --build   ->  open http://localhost:8080
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_PATH: ./data/reelscout.db
+    volumes:
+      - reelscout-data:/app/data       # SQLite DB, images, search history
+      - reelscout-models:/app/.cache   # CLIP model (downloaded once)
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+volumes:
+  reelscout-data:
+  reelscout-models:
