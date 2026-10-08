@@ -140,19 +140,6 @@ Rejected
 - **0** · Meta · Two women outdoors, no shoes visible · [open](https://www.facebook.com/ads/library/?id=1041236381806530)
 - **0** · Meta · A woman crying in a car · [open](https://www.facebook.com/ads/library/?id=1123150186683696)
 
-## Manual check
-
-Links opened by hand to confirm the brain's verdict. ✅ = the video shows the product, ❌ = it does not.
-
-| Example | Brain said | Checked |
-|---|---|---|
-| Earbuds, Instagram 91 | Exact match | |
-| Serum, Meta 87 | Exact match | |
-| Graphic tee, Meta 84 | Exact match | |
-| Allbirds, Meta 68 | Close match | |
-| Allbirds, Meta 52 | Close match (different colour) | |
-| Serum, Instagram 0 | Rejected | |
-
 ## How to reproduce
 
 ```bash
