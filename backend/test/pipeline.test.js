@@ -4,7 +4,7 @@ import { runSearch } from '../src/pipeline/runSearch.js';
 import { createSearch, getSearch } from '../src/pipeline/store.js';
 import { band } from '../src/brain/scoring.js';
 
-const thumb = async (i) => `data:image/png;base64,${(await sharp(Buffer.from(Array.from({ length: 32 * 32 * 3 }, (_, k) => ((k * (i + 3) * 7) % 251))), { raw: { width: 32, height: 32, channels: 3 } }).png().toBuffer()).toString('base64')}`;
+const thumb = async (i) => `data:image/png;base64,${(await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#${((i + 1) * 2654435).toString(16).slice(-6)}"/><circle cx="${(i * 37) % 100 + 10}" cy="${(i * 53) % 100 + 10}" r="${12 + (i % 20)}" fill="#fff"/><rect x="${(i * 71) % 80}" y="${(i * 29) % 80}" width="40" height="18" fill="#111"/><polygon points="0,120 ${(i * 17) % 110},${(i * 13) % 60} 70,120" fill="#c33"/></svg>`)).png().toBuffer()).toString('base64')}`;
 
 const RUN = Date.now().toString(36);
 function fakeSource(name, total, { optional = false, fail = false } = {}) {

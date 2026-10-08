@@ -27,7 +27,7 @@ export async function listModels() {
     candidates = (d.models || [])
       .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map((m) => m.name.replace(/^models\//, ''))
-      .filter((n) => /^gemini/.test(n) && !/(image|tts|audio|live|embedding|computer|robotics|veo|imagen|learnlm)/.test(n))
+      .filter((n) => /^gemini/.test(n) && !/(image|tts|audio|live|embedding|computer|robotics|veo|imagen|learnlm|transcribe|banana|omni|customtools|nano)/.test(n))
       .sort((a, b) => rank(a) - rank(b) || ver(b) - ver(a) || a.length - b.length);
   } catch {
     candidates = [];
@@ -38,7 +38,7 @@ export async function listModels() {
 async function switchModel(reason) {
   exhausted.add(current);
   const next = (await listModels()).find((m) => !exhausted.has(m));
-  if (!next || exhausted.size >= 4) return false;
+  if (!next || exhausted.size >= 6) return false;
   logger.warn({ from: current, to: next, reason }, 'switching vision model');
   current = next;
   return true;
@@ -57,7 +57,7 @@ function call(body) {
  * parts: [{ text }] or [{ image: Buffer }]
  * schema: Gemini responseSchema (OpenAPI subset) - forces valid JSON back
  */
-export async function geminiJson({ parts, schema, temperature = 0.2 }) {
+export async function geminiJson({ parts, schema, temperature = 0.2, deadline = Infinity }) {
   if (!geminiEnabled()) throw new AppError('BRAIN_DISABLED', disabledReason || 'GEMINI_API_KEY is not set', 503);
   const contents = [{
     role: 'user',
@@ -68,6 +68,7 @@ export async function geminiJson({ parts, schema, temperature = 0.2 }) {
   return queue.add(async () => {
     let attempt = 0;
     for (let guard = 0; guard < 14; guard++) {
+      if (Date.now() > deadline) throw new AppError('BRAIN_SKIPPED', 'Vision check time budget used up', 503);
       if (disabledReason) throw new AppError('BRAIN_DISABLED', disabledReason, 503);
       attempt++;
       const res = await call(body);
@@ -91,7 +92,7 @@ export async function geminiJson({ parts, schema, temperature = 0.2 }) {
       }
       // retired model, or overloaded / out of quota for too long -> move to the next available model
       const overloaded = [0, 429, 500, 502, 503, 504].includes(res.status);
-      if (res.status === 404 || (overloaded && attempt >= 3)) {
+      if (res.status === 404 || (overloaded && attempt >= 3) || (res.status === 429 && attempt >= 2)) {
         if (await switchModel(`HTTP ${res.status}`)) { attempt = 0; continue; }
         if (res.status === 404) disabledReason = `No available Gemini model (last tried "${current}")`;
         logger.error({ status: res.status, detail }, 'gemini call failed');

@@ -50,11 +50,11 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
         onProgress: (p) => emit('source', { source: source.name, ...p, shown: r.shown, need: MIN }),
       });
       const target = source.optional ? 15 : MIN;
-      const deadline = started + config.SOURCE_TIMEOUT_MS * 2.5;
+      const deadline = started + config.SOURCE_TIMEOUT_MS * 3.5;
 
       while (r.shown < target && !collector.exhausted && r.rounds < MAX_ROUNDS && Date.now() < deadline) {
         r.rounds++;
-        const want = Math.ceil((target - r.shown) * (r.rounds === 1 ? 1.4 : 1.8));
+        const want = Math.ceil((target - r.shown) * (r.rounds === 1 ? 2.2 : 2.5));
         let batch = await collector.fill(want, { timeoutMs: Math.max(10000, deadline - Date.now()) });
         if (!batch.length) continue;
         await attachThumbnails(batch);

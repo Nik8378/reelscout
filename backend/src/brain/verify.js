@@ -80,21 +80,30 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
     const ranked = [...withThumb].sort((a, b) => (out.get(b.id).clipScore ?? 50) - (out.get(a.id).clipScore ?? 50)).slice(0, config.GEMINI_MAX_VERIFY);
     const refImg = product.imageHash ? await small(readImage(product.imageHash)) : null;
     const batches = [];
-    for (let i = 0; i < ranked.length; i += 8) batches.push(ranked.slice(i, i + 8));
+    for (let i = 0; i < ranked.length; i += 10) batches.push(ranked.slice(i, i + 10));
     let done = 0;
+    const deadline = Date.now() + config.VERIFY_BUDGET_MS;
+    // keyword search without a photo = the user wants this TYPE of product, any brand (unless one is named)
+    const generic = !product.imageHash && product.inputType !== 'url';
+    const task = generic
+      ? `The user searched by keyword for a type of product: "${product.title}". Score how clearly each video thumbnail shows this kind of product (any brand, unless a brand is named in the search).`
+      : 'Decide whether each video thumbnail shows THIS EXACT product.';
+    const rule = generic
+      ? 'Score 70+ when this kind of product is clearly visible; 50-69 when related but partly visible or a close variant; below 50 for a different product type or when no product is visible.'
+      : 'Same category but different design/print/colour must score below 50.';
     await Promise.all(batches.map(async (batch) => {
       const parts = [{
-        text: `Decide whether each video thumbnail shows THIS EXACT product.
+        text: `${task}
 Product: ${analysis.summary || product.title}
 Key visual details: ${[analysis.printOrGraphic, ...(analysis.colors || []), ...(analysis.distinctiveFeatures || []), ...(analysis.logos || [])].filter(Boolean).join('; ')}
 ${refImg ? 'Image 0 is the REFERENCE product photo.' : 'No reference photo: judge from the description.'} The following images are candidates numbered 1..${batch.length} in order.
-Same category but different design/print/colour must score below 50. Thumbnails can be cropped, worn on a person, mirrored or have text overlays - judge the product itself.
+${rule} Thumbnails can be cropped, worn on a person, mirrored or have text overlays - judge the product itself.
 Caption hints (may be wrong): ${batch.map((c, i) => `${i + 1}: ${(c.caption || '').slice(0, 120).replace(/\s+/g, ' ')}`).join(' | ')}`,
       }];
       if (refImg) parts.push({ image: refImg });
       for (const c of batch) parts.push({ image: await small(c.thumbBuf).catch(() => c.thumbBuf) });
       try {
-        const res = await geminiJson({ parts, schema: VERIFY_SCHEMA, temperature: 0.1 });
+        const res = await geminiJson({ parts, schema: VERIFY_SCHEMA, temperature: 0.1, deadline });
         for (const r of res.results || []) {
           const c = batch[r.index - 1];
           if (!c) continue;
