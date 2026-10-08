@@ -9,6 +9,7 @@ import { updateSearch, saveResults } from './store.js';
 import { band } from '../brain/scoring.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { AppError } from '../utils/errors.js';
 
 const MAX_ROUNDS = 3;
 
@@ -32,6 +33,9 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
     emit('stage', { stage: 'analysing_image', status: 'running' });
     const analysis = deps.analysis || await analyzeProduct(product);
     const ladder = queryLadder(analysis, product);
+    if (!ladder.keywords.length && !ladder.hashtags.length) {
+      throw new AppError('NO_QUERY', 'Could not work out what to search for from the image alone.', 422, 'The vision model is unavailable right now - add a product name next to the image and search again.');
+    }
     product.analysis = analysis;
     updateSearch(searchId, { product_json: JSON.stringify(product) });
     emit('product', product);
@@ -61,7 +65,7 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
         batch = batch.filter((v) => !gate.isNearDuplicate(v));
 
         emit('stage', { stage: 'scoring', status: 'running', detail: `${source.label}: ${batch.length} videos` });
-        const scores = await scorer({ product, analysis, candidates: batch.map((v) => ({ id: v.key, thumbBuf: v.thumbBuf, caption: v.caption })) });
+        const scores = await scorer({ product, analysis, candidates: batch.map((v) => ({ id: v.key, thumbBuf: v.thumbBuf, caption: v.caption, author: v.author })) });
         for (const v of batch) {
           Object.assign(v, scores.get(v.key) || { score: 0, reason: 'Not scored' });
           v.band = v.band || band(v.score);

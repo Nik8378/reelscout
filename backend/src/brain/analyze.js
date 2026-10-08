@@ -38,17 +38,39 @@ const ANALYSIS_SCHEMA = {
 const tidyTag = (h) => h.replace(/^#/, '').replace(/[^\p{L}\p{N}_]/gu, '').toLowerCase();
 
 /** Works without Gemini so the pipeline never dead-ends: plain keyword queries from the title */
+const STOP = new Set(['with', 'and', 'for', 'the', 'pack', 'of', 'per', 'set', 'combo', 'new', 'buy', 'online', 'price', 'in', 'by']);
+const compact = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** "RiteBite Max Protein RiteBite Max Protein Ultimate Choco Almond 30gm Protein Bar (Pack of 1)" -> readable product name */
+export function cleanTitle(t) {
+  return (t || '')
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+    .split(/\s[|:–-]\s|,/)[0]
+    .replace(/\b\d+(\.\d+)?\s?(g|gm|gms|grams?|kg|ml|l|ltr|oz|lb|pcs?|pieces?|x|count)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Works without Gemini so the pipeline never dead-ends: queries built from the title and brand */
 export function fallbackAnalysis(product) {
-  const title = (product.title || '').replace(/[|–-].*$/, '').trim();
-  const words = title.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const brand = (product.brand || '').trim();
+  let title = cleanTitle(product.title);
+  if (brand) title = title.replace(new RegExp(`^(${escapeRe(brand)}\\s*)+`, 'i'), `${brand} `).trim();
+  const words = title.split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w.toLowerCase()));
+  const type = words.slice(-2).join(' ').toLowerCase();                       // e.g. "protein bar"
+  const rest = brand && title.toLowerCase().startsWith(brand.toLowerCase()) ? title.slice(brand.length).trim().split(/\s+/) : words;
+  const descriptor = rest.slice(0, -2).slice(-3).join(' ').toLowerCase();     // e.g. "ultimate choco almond"
+  const tags = [compact(brand), compact(brand.split(/\s+/)[0]), compact(type), descriptor && compact(`${descriptor} ${type}`), compact(title)]
+    .filter((h) => h && h.length > 3 && h.length <= 30);
   return {
-    productType: title, category: '', brand: product.brand || '', colors: [], printOrGraphic: 'unknown', logos: [], textOnProduct: [],
+    productType: type || title, category: '', brand, colors: [], printOrGraphic: 'unknown', logos: [], textOnProduct: [],
     material: '', shape: '', distinctiveFeatures: [], summary: title,
     queries: {
-      exact: [[product.brand, title].filter(Boolean).join(' ')].filter(Boolean),
-      descriptive: [words.slice(0, 4).join(' ')].filter(Boolean),
-      broad: [words.slice(-2).join(' ')].filter(Boolean),
-      hashtags: [words.join(''), ...words].map(tidyTag).filter((h) => h.length > 2).slice(0, 8),
+      exact: [title, brand && type && `${brand} ${type}`].filter(Boolean),
+      descriptive: [descriptor && `${descriptor} ${type}`].filter(Boolean),
+      broad: [type].filter(Boolean),
+      hashtags: [...new Set(tags)],
     },
     engine: 'fallback',
   };
@@ -88,15 +110,17 @@ ${product.imageHash ? 'The product photo is attached.' : 'No photo is available:
   }
 }
 
-/** Ordered query ladder used by every collector: most specific first, broadest last, then widening variants */
+/** Ordered query ladder used by every collector: exact name, brand, descriptive, broad, then widening variants */
 export function queryLadder(analysis, product) {
   const q = analysis.queries || {};
-  const core = (q.broad?.[0] || analysis.productType || product.title || '').trim();
-  const shortTitle = (product.title || '').split(/[|,(–-]/)[0].trim();
+  const brand = (product.brand || analysis.brand || '').trim();
+  const core = (q.broad?.[0] || analysis.productType || cleanTitle(product.title) || '').trim();
+  const name = product.inputType === 'keyword' ? product.title : cleanTitle(product.title);
+  const nameClean = brand ? name.replace(new RegExp(`^(${escapeRe(brand)}\\s*)+`, 'i'), `${brand} `).trim() : name;
   const widen = core ? [`${core} review`, `best ${core}`, `${core} unboxing`] : [];
-  const keywords = [...(q.exact || []), product.inputType === 'keyword' ? product.title : shortTitle, ...(q.descriptive || []), ...(q.broad || []), ...widen]
-    .filter(Boolean).map((x) => x.trim()).filter((x, i, a) => x.length > 1 && a.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
-  const tag = (x) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-  const hashtags = [...new Set([...(q.hashtags || []), ...keywords.slice(0, 4).map(tag), core && `${tag(core)}review`].filter((h) => h && h.length > 3))];
+  const keywords = [...(q.exact || []), nameClean, brand && core && `${brand} ${core}`, brand, ...(q.descriptive || []), ...(q.broad || []), ...widen]
+    .filter(Boolean).map((x) => x.trim()).filter((x, i, a) => x.length > 1 && x.length <= 80 && a.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
+  const hashtags = [...new Set([...(q.hashtags || []), compact(brand), compact(brand.split(/\s+/)[0]), ...keywords.slice(0, 4).map(compact), core && `${compact(core)}review`]
+    .filter((h) => h && h.length > 3 && h.length <= 30))];
   return { keywords, hashtags };
 }

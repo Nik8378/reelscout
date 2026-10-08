@@ -8,7 +8,7 @@ const clamp = (v, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
  *  text-image:  good match ~0.32, unrelated ~0.18
  */
 export function clipToScore(cos, mode = 'image') {
-  const [lo, hi] = mode === 'image' ? [0.55, 0.92] : [0.18, 0.33];
+  const [lo, hi] = mode === 'image' ? [0.5, 0.88] : [0.18, 0.33];
   return Math.round(clamp(((cos - lo) / (hi - lo)) * 100));
 }
 

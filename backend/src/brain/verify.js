@@ -3,6 +3,7 @@ import { geminiJson, geminiEnabled } from './gemini.js';
 import { embedImage, embedText, cosine, clipAvailable } from './clip.js';
 import { clipToScore, blendScore, band } from './scoring.js';
 import { readImage } from '../services/imageStore.js';
+import { cleanTitle } from './analyze.js';
 import { cache } from '../db.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -53,11 +54,15 @@ async function productEmbedding(product, analysis) {
  */
 export async function scoreCandidates({ product, analysis, candidates, onProgress = () => {} }) {
   const out = new Map();
-  const keyWords = [...new Set(`${product.title || ''} ${analysis.productType || ''} ${product.brand || ''}`.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2))];
-  const captionScore = (cap) => {
-    if (!keyWords.length) return 0;
-    const c = (cap || '').toLowerCase();
-    return Math.round((keyWords.filter((w) => c.includes(w)).length / keyWords.length) * 100);
+  const NOISE = /^(\d+\w*|pack|with|and|for|the|of|per|new|buy|online|price)$/;
+  const keyWords = [...new Set(`${cleanTitle(product.title)} ${analysis.productType || ''}`.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2 && !NOISE.test(w)))];
+  const brandKey = (product.brand || analysis.brand || '').toLowerCase().split(/\s+/)[0] || '';
+  // caption/author signal: naming the brand is strong evidence, product words are weaker evidence
+  const captionScore = (cap, author) => {
+    const c = `${cap || ''} ${author || ''}`.toLowerCase();
+    const words = keyWords.length ? keyWords.filter((w) => c.includes(w)).length / keyWords.length : 0;
+    if (brandKey.length > 2 && c.replace(/\s+/g, '').includes(brandKey)) return Math.round(70 + 30 * words);
+    return Math.round(80 * words);
   };
   const withThumb = candidates.filter((c) => c.thumbBuf);
 
@@ -120,8 +125,8 @@ Caption hints (may be wrong): ${batch.map((c, i) => `${i + 1}: ${(c.caption || '
   // 3) blend + explain
   for (const c of candidates) {
     const s = out.get(c.id) || { clipScore: null, llmScore: null };
-    const capScore = captionScore(c.caption);
-    const score = s.llmScore == null && s.clipScore != null ? Math.round(0.75 * s.clipScore + 0.25 * capScore) : blendScore({ clip: s.clipScore, llm: s.llmScore });
+    const capScore = captionScore(c.caption, c.author);
+    const score = s.llmScore == null && s.clipScore != null ? Math.round(0.55 * s.clipScore + 0.45 * capScore) : blendScore({ clip: s.clipScore, llm: s.llmScore });
     const reason = s.reason
       || (s.clipScore != null ? `Visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model not used)` : 'No thumbnail available to compare');
     out.set(c.id, { ...s, score, reason, band: band(score) });
