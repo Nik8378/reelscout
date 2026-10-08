@@ -6,7 +6,7 @@ from an image-analysis "brain". Repeat searches return **new** videos.
 
 **Stack:** Node.js (Express) · React (Vite) · SQLite · Gemini vision (free tier) + local CLIP · Playwright · Apify
 
-> Demo video: _add link_ · Pipeline flow: _add link_ · Test evidence: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) · Demo script: [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)
+> Demo video: https://drive.google.com/file/d/1uYHLp3mlNDfr_3_HzJFskOIcqJIungVG/view?usp=sharing · Pipeline flow: https://claude.ai/artifact/2uQ1sphL6pqxK6x4Wo8Ywj · Test evidence: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) · Demo script: [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)
 
 ---
 
