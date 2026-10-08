@@ -117,7 +117,7 @@ export function Pipeline({ stages, live, running, tiktok }) {
         const status = s?.status || (running ? 'waiting' : 'idle');
         let detail = s?.detail || (status === 'running' ? 'running…' : status === 'waiting' ? 'waiting' : '');
         if (src && status === 'running') {
-          detail = src.query ? `${src.shown ?? 0}/${src.need ?? 20} · ${src.query}` : `${src.shown ?? 0}/${src.need ?? 20}`;
+          detail = src.query ? `${src.shown ?? 0} found · ${src.query}` : `${src.shown ?? 0} found`;
         }
         return (
           <div key={key} className={`stage ${status}`}>
@@ -156,14 +156,14 @@ export function Kpis({ data, live, min }) {
     <section className="kpis" aria-label="Summary">
       {tile(
         'Instagram Reels',
-        ig >= min ? `${ig}` : `${ig} / ${min}`,
+        `${ig}`,
         (ig / min) * 100,
         ig >= min ? 'good' : 'warn',
         ig >= min ? `✓ Minimum ${min} met` : `${min - ig} short of ${min}`,
       )}
       {tile(
         'Meta video ads',
-        me >= min ? `${me}` : `${me} / ${min}`,
+        `${me}`,
         (me / min) * 100,
         me >= min ? 'good' : 'warn',
         me >= min ? `✓ Minimum ${min} met` : `${min - me} short of ${min}`,
@@ -345,7 +345,7 @@ export function Results({ data, running, min, shortlist, onToggleShort, onOpen }
             >
               {PLATFORM_TAB[p]}
               <span className={`count ${p !== 'all' && p !== 'tiktok' ? (newCount(p) >= min ? 'good' : 'warn') : ''}`}>
-                {p === 'all' || p === 'tiktok' || newCount(p) >= min ? newCount(p) : `${newCount(p)}/${min}`}
+                {newCount(p)}
               </span>
             </button>
           ))}
