@@ -14,7 +14,8 @@
     "collect": "node --env-file-if-exists=../.env scripts/collect-check.js",
     "search": "node --env-file-if-exists=../.env scripts/search-check.js",
     "models": "node --env-file-if-exists=../.env scripts/models.js",
-    "eval": "node --env-file-if-exists=../.env scripts/eval.js"
+    "eval": "node --env-file-if-exists=../.env scripts/eval.js",
+    "format": "prettier --write src test scripts"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
@@ -34,6 +35,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "prettier": "^3.3.3",
     "supertest": "^7.3.1",
     "vitest": "^5.0.3"
   }

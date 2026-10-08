@@ -19,11 +19,15 @@ export function createApp() {
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: config.CORS_ORIGIN.split(',') }));
   app.use(express.json({ limit: '12mb' }));
-  app.use(pinoHttp({
-    logger,
-    autoLogging: { ignore: (req) => req.url.includes('/stream') || req.url.startsWith('/api/images') || req.url === '/api/health' },
-    serializers: { req: (r) => ({ method: r.method, url: r.url }), res: (r) => ({ status: r.statusCode }) },
-  }));
+  app.use(
+    pinoHttp({
+      logger,
+      autoLogging: {
+        ignore: (req) => req.url.includes('/stream') || req.url.startsWith('/api/images') || req.url === '/api/health',
+      },
+      serializers: { req: (r) => ({ method: r.method, url: r.url }), res: (r) => ({ status: r.statusCode }) },
+    }),
+  );
   app.use('/api/', rateLimit({ windowMs: 60_000, limit: 600 }));
 
   app.get('/api/health', (req, res) => {
@@ -43,7 +47,9 @@ export function createApp() {
   app.use('/api/history', historyRouter);
   app.use('/api/shortlist', shortlistRouter);
 
-  app.use('/api', (req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: `No route ${req.method} ${req.originalUrl}` } }));
+  app.use('/api', (req, res) =>
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: `No route ${req.method} ${req.originalUrl}` } }),
+  );
   app.use(errorHandler(logger));
   return app;
 }

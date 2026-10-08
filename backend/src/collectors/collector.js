@@ -4,7 +4,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function withRetry(fn, retries = 2) {
   for (let i = 0; ; i++) {
-    try { return await fn(); } catch (err) {
+    try {
+      return await fn();
+    } catch (err) {
       const fatal = ['NO_TOKEN', 'AUTH', 'NO_CREDIT', 'NO_ACTOR'].includes(err.code);
       if (fatal || i >= retries) throw err;
       await sleep(1500 * 2 ** i);
@@ -12,9 +14,16 @@ async function withRetry(fn, retries = 2) {
   }
 }
 
-const withTimeout = (p, ms, label) => Promise.race([
-  p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`), { code: 'TIMEOUT' })), ms)),
-]);
+const withTimeout = (p, ms, label) =>
+  Promise.race([
+    p,
+    new Promise((_, rej) =>
+      setTimeout(
+        () => rej(Object.assign(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`), { code: 'TIMEOUT' })),
+        ms,
+      ),
+    ),
+  ]);
 
 /**
  * Keeps a cursor over one source's query ladder. fill(n) walks the ladder
@@ -33,7 +42,9 @@ export class SourceCollector {
     this.fatal = null;
   }
 
-  get exhausted() { return this.fatal || this.i >= this.tasks.length; }
+  get exhausted() {
+    return this.fatal || this.i >= this.tasks.length;
+  }
 
   async fill(n, { timeoutMs = 120000 } = {}) {
     const added = [];
@@ -44,11 +55,18 @@ export class SourceCollector {
       this.tried.push(task.label);
       this.onProgress({ source: this.source.name, status: 'query', query: task.label, count: added.length, need: n });
       try {
-        const items = await withTimeout(withRetry(() => this.source.run(task, limit)), Math.max(5000, deadline - Date.now()), this.source.label);
+        const items = await withTimeout(
+          withRetry(() => this.source.run(task, limit)),
+          Math.max(5000, deadline - Date.now()),
+          this.source.label,
+        );
         let fresh = 0;
         for (const v of items) {
           if (added.length >= n * 2) break;
-          if (this.accept(v)) { added.push({ ...v, query: task.label }); fresh++; }
+          if (this.accept(v)) {
+            added.push({ ...v, query: task.label });
+            fresh++;
+          }
         }
         logger.info({ source: this.source.name, query: task.label, raw: items.length, fresh }, 'collector step');
       } catch (err) {

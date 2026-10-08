@@ -4,7 +4,11 @@ import { sha1 } from '../services/imageStore.js';
 import { logger } from '../logger.js';
 
 export class SourceError extends Error {
-  constructor(code, message, retryable = false) { super(message); this.code = code; this.retryable = retryable; }
+  constructor(code, message, retryable = false) {
+    super(message);
+    this.code = code;
+    this.retryable = retryable;
+  }
 }
 
 /**
@@ -21,21 +25,26 @@ export async function runActor(actorId, input, { timeoutSec = 110, maxItems } = 
   url.searchParams.set('timeout', String(timeoutSec));
   if (maxItems) url.searchParams.set('maxItems', String(maxItems));
   const started = Date.now();
-  const send = () => fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.APIFY_TOKEN}` },
-    body: JSON.stringify(input),
-    signal: AbortSignal.timeout((timeoutSec + 20) * 1000),
-  });
+  const send = () =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.APIFY_TOKEN}` },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout((timeoutSec + 20) * 1000),
+    });
   const res = await send()
     .catch(() => new Promise((r) => setTimeout(r, 2000)).then(send))
-    .catch((err) => { throw new SourceError('NETWORK', `Apify unreachable: ${err.cause?.code || err.message}`, true); });
+    .catch((err) => {
+      throw new SourceError('NETWORK', `Apify unreachable: ${err.cause?.code || err.message}`, true);
+    });
 
   if (res.status === 401) throw new SourceError('AUTH', 'Apify token is invalid');
-  if (res.status === 402 || res.status === 403) throw new SourceError('NO_CREDIT', `Apify refused the request (HTTP ${res.status}) - free monthly credit used up`);
+  if (res.status === 402 || res.status === 403)
+    throw new SourceError('NO_CREDIT', `Apify refused the request (HTTP ${res.status}) - free monthly credit used up`);
   if (res.status === 404) throw new SourceError('NO_ACTOR', `Apify actor ${actorId} not found`);
   if (res.status === 429) throw new SourceError('RATE_LIMIT', 'Apify rate limit hit', true);
-  if (!res.ok && res.status !== 408) throw new SourceError('UPSTREAM', `Apify ${actorId} failed (HTTP ${res.status})`, res.status >= 500);
+  if (!res.ok && res.status !== 408)
+    throw new SourceError('UPSTREAM', `Apify ${actorId} failed (HTTP ${res.status})`, res.status >= 500);
 
   const items = await res.json().catch(() => []);
   const list = Array.isArray(items) ? items : [];

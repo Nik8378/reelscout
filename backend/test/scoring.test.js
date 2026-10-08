@@ -5,7 +5,7 @@ import { fallbackAnalysis, queryLadder } from '../src/brain/analyze.js';
 describe('scoring', () => {
   it('maps CLIP cosine to 0-100 and clamps', () => {
     expect(clipToScore(0.92)).toBe(100);
-    expect(clipToScore(0.40)).toBe(0);
+    expect(clipToScore(0.4)).toBe(0);
     expect(clipToScore(0.69)).toBe(50);
     expect(clipToScore(0.33, 'text')).toBe(100);
   });

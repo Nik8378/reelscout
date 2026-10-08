@@ -18,8 +18,15 @@ const VERIFY_SCHEMA = {
         type: 'OBJECT',
         properties: {
           index: { type: 'INTEGER' },
-          score: { type: 'INTEGER', description: '0-100: 90+ exact same product clearly shown, 70-89 very likely same product, 50-69 close visual match, 20-49 same category only, 0-19 unrelated' },
-          reason: { type: 'STRING', description: 'Max 15 words, concrete, e.g. "same skull print and black colour, worn by a model"' },
+          score: {
+            type: 'INTEGER',
+            description:
+              '0-100: 90+ exact same product clearly shown, 70-89 very likely same product, 50-69 close visual match, 20-49 same category only, 0-19 unrelated',
+          },
+          reason: {
+            type: 'STRING',
+            description: 'Max 15 words, concrete, e.g. "same skull print and black colour, worn by a model"',
+          },
           checks: {
             type: 'OBJECT',
             properties: { print: CHECK, colour: CHECK, shape: CHECK, logoText: CHECK, productVisible: CHECK },
@@ -55,7 +62,14 @@ async function productEmbedding(product, analysis) {
 export async function scoreCandidates({ product, analysis, candidates, onProgress = () => {} }) {
   const out = new Map();
   const NOISE = /^(\d+\w*|pack|with|and|for|the|of|per|new|buy|online|price)$/;
-  const keyWords = [...new Set(`${cleanTitle(product.title)} ${analysis.productType || ''}`.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2 && !NOISE.test(w)))];
+  const keyWords = [
+    ...new Set(
+      `${cleanTitle(product.title)} ${analysis.productType || ''}`
+        .toLowerCase()
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter((w) => w.length > 2 && !NOISE.test(w)),
+    ),
+  ];
   const brandKey = (product.brand || analysis.brand || '').toLowerCase().split(/\s+/)[0] || '';
   // caption/author signal: naming the brand is strong evidence, product words are weaker evidence
   const captionScore = (cap, author) => {
@@ -69,11 +83,19 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
   // 1) CLIP
   let ref = null;
   if (await clipAvailable()) {
-    try { ref = await productEmbedding(product, analysis); } catch (err) { logger.warn({ err: err.message }, 'reference embedding failed'); }
+    try {
+      ref = await productEmbedding(product, analysis);
+    } catch (err) {
+      logger.warn({ err: err.message }, 'reference embedding failed');
+    }
   }
   let textRef = null;
   if (ref?.mode === 'image') {
-    try { textRef = await embedText(`a photo of ${analysis.summary || product.title}`); } catch { /* optional signal */ }
+    try {
+      textRef = await embedText(`a photo of ${analysis.summary || product.title}`);
+    } catch {
+      /* optional signal */
+    }
   }
   for (const c of withThumb) {
     let clipScore = null;
@@ -83,7 +105,9 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
         clipScore = clipToScore(cosine(ref.vec, emb), ref.mode);
         // text match is discounted (x0.85) so it can lift real-life shots without inflating category look-alikes
         if (textRef) clipScore = Math.max(clipScore, Math.round(0.85 * clipToScore(cosine(textRef, emb), 'text')));
-      } catch { /* bad image */ }
+      } catch {
+        /* bad image */
+      }
     }
     out.set(c.id, { clipScore, llmScore: null, reason: null, checks: null });
   }
@@ -91,7 +115,9 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
 
   // 2) Gemini verification on the most promising candidates
   if (geminiEnabled()) {
-    const ranked = [...withThumb].sort((a, b) => (out.get(b.id).clipScore ?? 50) - (out.get(a.id).clipScore ?? 50)).slice(0, config.GEMINI_MAX_VERIFY);
+    const ranked = [...withThumb]
+      .sort((a, b) => (out.get(b.id).clipScore ?? 50) - (out.get(a.id).clipScore ?? 50))
+      .slice(0, config.GEMINI_MAX_VERIFY);
     const refImg = product.imageHash ? await small(readImage(product.imageHash)) : null;
     const batches = [];
     for (let i = 0; i < ranked.length; i += 10) batches.push(ranked.slice(i, i + 10));
@@ -105,43 +131,51 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
     const rule = generic
       ? 'Score 70+ when this kind of product is clearly visible; 50-69 when related but partly visible or a close variant; below 50 for a different product type or when no product is visible.'
       : 'Same category but different design/print/colour must score below 50.';
-    await Promise.all(batches.map(async (batch) => {
-      const parts = [{
-        text: `${task}
+    await Promise.all(
+      batches.map(async (batch) => {
+        const parts = [
+          {
+            text: `${task}
 Product: ${analysis.summary || product.title}
 Key visual details: ${[analysis.printOrGraphic, ...(analysis.colors || []), ...(analysis.distinctiveFeatures || []), ...(analysis.logos || [])].filter(Boolean).join('; ')}
 ${refImg ? 'Image 0 is the REFERENCE product photo.' : 'No reference photo: judge from the description.'} The following images are candidates numbered 1..${batch.length} in order.
 ${rule} Thumbnails can be cropped, worn on a person, mirrored or have text overlays - judge the product itself.
 Caption hints (may be wrong): ${batch.map((c, i) => `${i + 1}: ${(c.caption || '').slice(0, 120).replace(/\s+/g, ' ')}`).join(' | ')}`,
-      }];
-      if (refImg) parts.push({ image: refImg });
-      for (const c of batch) parts.push({ image: await small(c.thumbBuf).catch(() => c.thumbBuf) });
-      try {
-        const res = await geminiJson({ parts, schema: VERIFY_SCHEMA, temperature: 0.1, deadline });
-        for (const r of res.results || []) {
-          const c = batch[r.index - 1];
-          if (!c) continue;
-          Object.assign(out.get(c.id), { llmScore: Math.max(0, Math.min(100, r.score)), reason: r.reason, checks: r.checks });
+          },
+        ];
+        if (refImg) parts.push({ image: refImg });
+        for (const c of batch) parts.push({ image: await small(c.thumbBuf).catch(() => c.thumbBuf) });
+        try {
+          const res = await geminiJson({ parts, schema: VERIFY_SCHEMA, temperature: 0.1, deadline });
+          for (const r of res.results || []) {
+            const c = batch[r.index - 1];
+            if (!c) continue;
+            Object.assign(out.get(c.id), { llmScore: Math.max(0, Math.min(100, r.score)), reason: r.reason, checks: r.checks });
+          }
+        } catch (err) {
+          logger.warn({ err: err.message }, 'verify batch failed - CLIP score only');
         }
-      } catch (err) {
-        logger.warn({ err: err.message }, 'verify batch failed - CLIP score only');
-      }
-      done += batch.length;
-      onProgress({ stage: 'verify', done, total: ranked.length });
-    }));
+        done += batch.length;
+        onProgress({ stage: 'verify', done, total: ranked.length });
+      }),
+    );
   }
 
   // 3) blend + explain
   for (const c of candidates) {
     const s = out.get(c.id) || { clipScore: null, llmScore: null };
     const capScore = captionScore(c.caption, c.author);
-    const byBrand = brandKey.length > 2 && `${c.caption || ''} ${c.author || ''}`.toLowerCase().replace(/\s+/g, '').includes(brandKey);
+    const byBrand =
+      brandKey.length > 2 && `${c.caption || ''} ${c.author || ''}`.toLowerCase().replace(/\s+/g, '').includes(brandKey);
     const noVision = s.llmScore == null && s.clipScore != null;
     const score = noVision
       ? fallbackScore({ clip: s.clipScore, caption: capScore, byBrand })
       : blendScore({ clip: s.clipScore, llm: s.llmScore });
-    const reason = s.reason
-      || (s.clipScore != null ? `${byBrand ? `Posted by / mentions ${product.brand || analysis.brand} · ` : ''}visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model busy - not used)` : 'No thumbnail available to compare');
+    const reason =
+      s.reason ||
+      (s.clipScore != null
+        ? `${byBrand ? `Posted by / mentions ${product.brand || analysis.brand} · ` : ''}visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model busy - not used)`
+        : 'No thumbnail available to compare');
     out.set(c.id, { ...s, score, reason, band: band(score) });
   }
   return out;

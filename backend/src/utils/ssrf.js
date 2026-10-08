@@ -16,7 +16,11 @@ export function isPublicIp(ip) {
 
 export async function assertSafeUrl(raw) {
   let url;
-  try { url = new URL(raw); } catch { throw new AppError('BAD_URL', 'That is not a valid URL.'); }
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new AppError('BAD_URL', 'That is not a valid URL.');
+  }
   if (!['http:', 'https:'].includes(url.protocol)) throw new AppError('BAD_URL', 'Only http and https links are allowed.');
   if (url.username || url.password) throw new AppError('BAD_URL', 'Links with credentials are not allowed.');
   if (url.port && !['80', '443'].includes(url.port)) throw new AppError('BAD_URL', 'Only standard web ports are allowed.');

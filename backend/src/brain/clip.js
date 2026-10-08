@@ -20,7 +20,10 @@ async function load() {
       ]);
       logger.info({ model: id }, 'CLIP model loaded');
       return { t, processor, vision, tokenizer, text };
-    })().catch((err) => { loading = null; throw err; });
+    })().catch((err) => {
+      loading = null;
+      throw err;
+    });
   }
   return loading;
 }
@@ -50,5 +53,11 @@ export async function embedText(text) {
 }
 
 export async function clipAvailable() {
-  try { await load(); return true; } catch (err) { logger.warn({ err: err.message }, 'CLIP unavailable'); return false; }
+  try {
+    await load();
+    return true;
+  } catch (err) {
+    logger.warn({ err: err.message }, 'CLIP unavailable');
+    return false;
+  }
 }

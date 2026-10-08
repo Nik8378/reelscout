@@ -5,11 +5,16 @@ import { DedupGate } from '../src/dedup/gate.js';
 
 const emptyHistory = () => ({ ids: new Set(), groups: new Set(), media: new Set(), phashes: [] });
 // realistic test 'thumbnails': a few shapes whose layout depends on the seed
-const pattern = (seed) => sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+const pattern = (seed) =>
+  sharp(
+    Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
   <rect width="200" height="200" fill="#${(seed * 1234567).toString(16).slice(0, 6).padEnd(6, '3')}"/>
-  <circle cx="${(seed * 37) % 160 + 20}" cy="${(seed * 53) % 160 + 20}" r="40" fill="#fff"/>
+  <circle cx="${((seed * 37) % 160) + 20}" cy="${((seed * 53) % 160) + 20}" r="40" fill="#fff"/>
   <rect x="${(seed * 71) % 120}" y="${(seed * 29) % 120}" width="70" height="30" fill="#111"/>
-  <polygon points="10,190 ${(seed * 17) % 180 + 10},${(seed * 13) % 100 + 10} 120,190" fill="#c33"/></svg>`)).png().toBuffer();
+  <polygon points="10,190 ${((seed * 17) % 180) + 10},${((seed * 13) % 100) + 10} 120,190" fill="#c33"/></svg>`),
+  )
+    .png()
+    .toBuffer();
 
 describe('perceptual hash', () => {
   it('re-encoded / resized copy is a near-duplicate, different image is not', async () => {
@@ -25,10 +30,17 @@ describe('perceptual hash', () => {
     expect(hamming(await dHash(mirrored, { flip: true }), await dHash(a))).toBeLessThanOrEqual(2);
   });
   it('media hash ignores signed query strings', () => {
-    expect(mediaHash('https://scontent-a.cdninstagram.com/v/abc.mp4?oe=1&sig=x')).toBe(mediaHash('https://scontent-b.cdninstagram.com/v/abc.mp4?oe=2'));
+    expect(mediaHash('https://scontent-a.cdninstagram.com/v/abc.mp4?oe=1&sig=x')).toBe(
+      mediaHash('https://scontent-b.cdninstagram.com/v/abc.mp4?oe=2'),
+    );
   });
   it('caption overlap catches reposts', () => {
-    expect(jaccard(captionTokens('Our new skull tee is back in stock #drop'), captionTokens('our NEW skull tee is back in stock!! #repost'))).toBeGreaterThan(0.85);
+    expect(
+      jaccard(
+        captionTokens('Our new skull tee is back in stock #drop'),
+        captionTokens('our NEW skull tee is back in stock!! #repost'),
+      ),
+    ).toBeGreaterThan(0.85);
   });
 });
 

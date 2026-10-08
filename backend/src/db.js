@@ -72,11 +72,17 @@ export const cache = {
   get(key) {
     const row = db.prepare('SELECT value, expires_at FROM cache WHERE key = ?').get(key);
     if (!row) return null;
-    if (row.expires_at < Date.now()) { db.prepare('DELETE FROM cache WHERE key = ?').run(key); return null; }
+    if (row.expires_at < Date.now()) {
+      db.prepare('DELETE FROM cache WHERE key = ?').run(key);
+      return null;
+    }
     return JSON.parse(row.value);
   },
   set(key, value, ttlMs = 7 * 24 * 3600 * 1000) {
-    db.prepare('INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES (?, ?, ?)')
-      .run(key, JSON.stringify(value), Date.now() + ttlMs);
+    db.prepare('INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES (?, ?, ?)').run(
+      key,
+      JSON.stringify(value),
+      Date.now() + ttlMs,
+    );
   },
 };

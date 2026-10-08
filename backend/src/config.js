@@ -15,7 +15,10 @@ const schema = z.object({
   APIFY_TOKEN: z.string().default(''),
   RAPIDAPI_KEY: z.string().default(''),
   RAPIDAPI_IG_HOST: z.string().default(''),
-  ENABLE_TIKTOK: z.string().default('true').transform((v) => v === 'true'),
+  ENABLE_TIKTOK: z
+    .string()
+    .default('true')
+    .transform((v) => v === 'true'),
   MIN_PER_SOURCE: z.coerce.number().default(20),
   MATCH_THRESHOLD_SHOW: z.coerce.number().default(50),
   MATCH_THRESHOLD_EXACT: z.coerce.number().default(70),

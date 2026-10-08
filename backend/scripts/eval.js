@@ -11,38 +11,71 @@ import { geminiStatus } from '../src/brain/gemini.js';
 import { config } from '../src/config.js';
 
 const args = process.argv.slice(2);
-const products = args.length ? args.map((q) => ({ q, note: '' })) : JSON.parse(fs.readFileSync(new URL('./test-products.json', import.meta.url)))
-  .filter((p) => (p.q.startsWith('PASTE_') ? (console.log(`Skipping placeholder - edit scripts/test-products.json: ${p.note}`), false) : true));
+const products = args.length
+  ? args.map((q) => ({ q, note: '' }))
+  : JSON.parse(fs.readFileSync(new URL('./test-products.json', import.meta.url))).filter((p) =>
+      p.q.startsWith('PASTE_') ? (console.log(`Skipping placeholder - edit scripts/test-products.json: ${p.note}`), false) : true,
+    );
 const rows = [];
 const details = [];
-const esc = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\s+/g, ' ').slice(0, 110);
+const esc = (s) =>
+  String(s ?? '')
+    .replace(/\|/g, '\\|')
+    .replace(/\s+/g, ' ')
+    .slice(0, 110);
 
 for (const [i, p] of products.entries()) {
   console.log(`\n[${i + 1}/${products.length}] ${p.q}`);
   const input = { ...classifyInput(p.q), options: { tiktok: true } };
   const id = createSearch({ inputType: input.type, input: p.q, options: input.options });
-  await runSearch({ searchId: id, input, emit: (t, d) => { if (t === 'stage' && d.status !== 'running') console.log(`  ${d.stage}: ${d.status}${d.detail ? ` (${d.detail})` : ''}`); } });
+  await runSearch({
+    searchId: id,
+    input,
+    emit: (t, d) => {
+      if (t === 'stage' && d.status !== 'running') console.log(`  ${d.stage}: ${d.status}${d.detail ? ` (${d.detail})` : ''}`);
+    },
+  });
   const s = getSearch(id);
   const n = (pl, st = 'shown') => s.videos.filter((v) => v.platform === pl && v.status === st).length;
   const shown = s.videos.filter((v) => v.status === 'shown');
   const avg = shown.length ? Math.round(shown.reduce((a, v) => a + v.score, 0) / shown.length) : 0;
   const dedup = Object.values(s.sources.dedup || {}).reduce((a, b) => a + b, 0);
   const engine = s.product?.analysis?.engine || '-';
-  rows.push(`| ${i + 1} | ${esc(s.product?.title || p.q)} | ${p.note || s.inputType} | ${n('instagram')} / 20 | ${n('meta')} / 20 | ${n('tiktok')} | ${avg} | ${dedup} | ${engine} | ${Math.round((s.sources.ms || 0) / 1000)}s | ${s.status} |`);
+  rows.push(
+    `| ${i + 1} | ${esc(s.product?.title || p.q)} | ${p.note || s.inputType} | ${n('instagram')} / 20 | ${n('meta')} / 20 | ${n('tiktok')} | ${avg} | ${dedup} | ${engine} | ${Math.round((s.sources.ms || 0) / 1000)}s | ${s.status} |`,
+  );
 
   const best = [...shown].sort((a, b) => b.score - a.score).slice(0, 3);
-  const worst = s.videos.filter((v) => v.status === 'below_threshold').sort((a, b) => a.score - b.score).slice(0, 2);
+  const worst = s.videos
+    .filter((v) => v.status === 'below_threshold')
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 2);
   const borderline = shown.filter((v) => v.score < 60).slice(0, 2);
   const line = (v) => `- **${v.score}** · ${v.platform} · ${esc(v.reason)} · [open](${v.url})`;
-  details.push([
-    `### ${i + 1}. ${esc(s.product?.title || p.q)}`,
-    `Input: \`${p.q}\` · status **${s.status}**${s.error ? ` (${esc(s.error)})` : ''}`,
-    ...Object.entries(s.sources).filter(([, r]) => r && r.label).map(([, r]) => `- ${r.label}: ${r.shown} shown, ${r.below} below threshold, ${r.rounds} round(s), ${r.tried.length} queries${r.message ? ` - ${esc(r.message)}` : ''}`),
-    '', '**Good matches (highest scores)**', ...best.map(line),
-    '', '**Borderline (shown, score 50-59)**', ...(borderline.length ? borderline.map(line) : ['- none']),
-    '', '**Rejected (below threshold)**', ...(worst.length ? worst.map(line) : ['- none']),
-    '', '> Manual check: open each link above and note whether it truly shows the product (✅ / ❌).', '',
-  ].join('\n'));
+  details.push(
+    [
+      `### ${i + 1}. ${esc(s.product?.title || p.q)}`,
+      `Input: \`${p.q}\` · status **${s.status}**${s.error ? ` (${esc(s.error)})` : ''}`,
+      ...Object.entries(s.sources)
+        .filter(([, r]) => r && r.label)
+        .map(
+          ([, r]) =>
+            `- ${r.label}: ${r.shown} shown, ${r.below} below threshold, ${r.rounds} round(s), ${r.tried.length} queries${r.message ? ` - ${esc(r.message)}` : ''}`,
+        ),
+      '',
+      '**Good matches (highest scores)**',
+      ...best.map(line),
+      '',
+      '**Borderline (shown, score 50-59)**',
+      ...(borderline.length ? borderline.map(line) : ['- none']),
+      '',
+      '**Rejected (below threshold)**',
+      ...(worst.length ? worst.map(line) : ['- none']),
+      '',
+      '> Manual check: open each link above and note whether it truly shows the product (✅ / ❌).',
+      '',
+    ].join('\n'),
+  );
 }
 
 const md = `# Test results

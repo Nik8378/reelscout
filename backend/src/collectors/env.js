@@ -9,4 +9,5 @@ export const collectorEnv = {
   META_COUNTRY: e.META_COUNTRY || 'ALL',
   META_USE_BROWSER_FIRST: (e.META_USE_BROWSER_FIRST || 'true') === 'true',
   RAW_CACHE_MS: Number(e.RAW_CACHE_HOURS || 24) * 3600 * 1000,
+  TIKTOK_DOWNLOAD_VIDEOS: (e.TIKTOK_DOWNLOAD_VIDEOS || 'false') === 'true',
 };

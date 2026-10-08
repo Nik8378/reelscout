@@ -15,7 +15,11 @@ export const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
 export async function storeImage(buf) {
   let jpeg;
   try {
-    jpeg = await sharp(buf).rotate().resize(768, 768, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer();
+    jpeg = await sharp(buf)
+      .rotate()
+      .resize(768, 768, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
   } catch {
     throw new AppError('BAD_IMAGE', 'That file is not a readable image.');
   }
@@ -39,7 +43,8 @@ export async function loadAndStoreImage(src) {
     buf = Buffer.from(m[1], 'base64');
   } else {
     const res = await safeFetch(src, { maxBytes: 10_000_000, timeoutMs: 15000, headers: { accept: 'image/*' } });
-    if (res.status !== 200) throw new AppError('IMAGE_FETCH_FAILED', `Could not download the product image (HTTP ${res.status}).`, 422);
+    if (res.status !== 200)
+      throw new AppError('IMAGE_FETCH_FAILED', `Could not download the product image (HTTP ${res.status}).`, 422);
     buf = res.body;
   }
   return storeImage(buf);

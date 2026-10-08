@@ -8,7 +8,9 @@ async function json(res) {
   }
   return body;
 }
-const post = (url, data) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+
+const post = (url, data) =>
+  fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
 export const api = {
   health: () => fetch('/api/health').then(json),
@@ -25,10 +27,10 @@ export const isUrl = (q) => /^https?:\/\//i.test(q.trim()) || /^(www\.)?[a-z0-9-
 
 export function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(new Error('Could not read the image'));
-    r.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read the image'));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -42,4 +44,6 @@ export function timeAgo(ts) {
 }
 
 export const band = (score) => (score >= 70 ? 'exact' : score >= 50 ? 'close' : 'low');
+export const VERDICT = { exact: 'Exact match', close: 'Close match', low: 'Below threshold' };
 export const PLATFORM = { instagram: 'Instagram Reel', meta: 'Meta ad', tiktok: 'TikTok' };
+export const PLATFORM_TAB = { instagram: 'Instagram Reels', meta: 'Meta Ad Library', tiktok: 'TikTok', all: 'All' };

@@ -6,7 +6,14 @@ describe('parseProductHtml', () => {
   it('reads JSON-LD Product inside @graph', () => {
     const html = `<html><head><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage"},{"@type":"Product","name":"Skull Oversized Tee","description":"<p>Heavy cotton</p>","image":["//cdn.shop.com/a.jpg"],"brand":{"name":"Acme"},"offers":{"price":"999"}}]}</script></head></html>`;
     const p = parseProductHtml(html, 'https://shop.com/products/x');
-    expect(p).toMatchObject({ title: 'Skull Oversized Tee', description: 'Heavy cotton', image: 'https://cdn.shop.com/a.jpg', brand: 'Acme', price: '999', source: 'json-ld' });
+    expect(p).toMatchObject({
+      title: 'Skull Oversized Tee',
+      description: 'Heavy cotton',
+      image: 'https://cdn.shop.com/a.jpg',
+      brand: 'Acme',
+      price: '999',
+      source: 'json-ld',
+    });
   });
   it('falls back to Amazon DOM', () => {
     const html = `<span id="productTitle"> Protein Dark Chocolate 70% </span><img id="landingImage" data-a-dynamic-image='{"https://m.media-amazon.com/i.jpg":[500,500]}'>`;

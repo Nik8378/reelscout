@@ -30,7 +30,10 @@ export function normMeta(it) {
   if (!it) return null;
   const id = it.ad_archive_id || it.adArchiveID || it.adArchiveId || it.id;
   const snap = it.snapshot || it;
-  const videos = [...(snap.videos || []), ...(snap.cards || []).filter((c) => c.video_preview_image_url || c.video_hd_url || c.video_sd_url)];
+  const videos = [
+    ...(snap.videos || []),
+    ...(snap.cards || []).filter((c) => c.video_preview_image_url || c.video_hd_url || c.video_sd_url),
+  ];
   const v = videos.find((x) => x.video_preview_image_url || x.video_hd_url || x.video_sd_url);
   if (!id || !v) return null;
   const body = text(snap.body?.text ?? snap.body) || text(snap.body?.markup?.__html) || text(snap.cards?.[0]?.body) || '';
@@ -41,7 +44,11 @@ export function normMeta(it) {
     url: `https://www.facebook.com/ads/library/?id=${id}`,
     thumbnail: v.video_preview_image_url || null,
     mediaUrl: v.video_hd_url || v.video_sd_url || null,
-    caption: [snap.title, body].filter(Boolean).join(' - ').replace(/\{\{[^}]+\}\}/g, '').slice(0, 2000),
+    caption: [snap.title, body]
+      .filter(Boolean)
+      .join(' - ')
+      .replace(/\{\{[^}]+\}\}/g, '')
+      .slice(0, 2000),
     author: it.page_name || snap.page_name || null,
     postedAt: ts(it.start_date || it.startDate),
   };
@@ -55,7 +62,7 @@ export function normTikTok(it) {
     groupId: null,
     url: it.webVideoUrl || `https://www.tiktok.com/@${it.authorMeta?.name || 'user'}/video/${it.id}`,
     thumbnail: it.videoMeta?.coverUrl || it.videoMeta?.originalCoverUrl || it.covers?.default || null,
-    mediaUrl: null,
+    mediaUrl: it.mediaUrls?.[0] || null, // set when TIKTOK_DOWNLOAD_VIDEOS=true (copy stored by Apify)
     caption: text(it.text).slice(0, 2000),
     author: it.authorMeta?.name || null,
     postedAt: ts(it.createTimeISO || it.createTime),

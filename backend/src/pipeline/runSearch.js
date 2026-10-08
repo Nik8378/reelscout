@@ -5,7 +5,7 @@ import { SOURCES } from '../collectors/sources.js';
 import { SourceCollector } from '../collectors/collector.js';
 import { DedupGate } from '../dedup/gate.js';
 import { attachThumbnails } from '../dedup/thumbs.js';
-import { updateSearch, saveResults } from './store.js';
+import { updateSearch, saveResults, saveSeen } from './store.js';
 import { band } from '../brain/scoring.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -31,15 +31,25 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
     emit('stage', { stage: 'fetching_page', status: 'done', detail: product.cached ? 'cached' : product.source });
 
     emit('stage', { stage: 'analysing_image', status: 'running' });
-    const analysis = deps.analysis || await analyzeProduct(product);
+    const analysis = deps.analysis || (await analyzeProduct(product));
     const ladder = queryLadder(analysis, product);
     if (!ladder.keywords.length && !ladder.hashtags.length) {
-      throw new AppError('NO_QUERY', 'Could not work out what to search for from the image alone.', 422, 'The vision model is unavailable right now - add a product name next to the image and search again.');
+      throw new AppError(
+        'NO_QUERY',
+        'Could not work out what to search for from the image alone.',
+        422,
+        'The vision model is unavailable right now - add a product name next to the image and search again.',
+      );
     }
     product.analysis = analysis;
     updateSearch(searchId, { product_json: JSON.stringify(product) });
     emit('product', product);
-    emit('stage', { stage: 'analysing_image', status: 'done', detail: analysis.engine === 'gemini' ? `${(analysis.distinctiveFeatures || []).length} distinctive features` : 'keyword fallback' });
+    emit('stage', {
+      stage: 'analysing_image',
+      status: 'done',
+      detail:
+        analysis.engine === 'gemini' ? `${(analysis.distinctiveFeatures || []).length} distinctive features` : 'keyword fallback',
+    });
 
     const gate = new DedupGate({ searchId, includeSeen: Boolean(input.options?.includeSeen) });
     const wantTikTok = input.options?.tiktok ?? config.ENABLE_TIKTOK;
@@ -47,7 +57,18 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
     const report = {};
 
     const runSource = async (source) => {
-      const r = report[source.name] = { label: source.label, required: !source.optional, need: source.optional ? 0 : MIN, shown: 0, below: 0, seen: 0, rounds: 0, status: 'running', tried: [], errors: [] };
+      const r = (report[source.name] = {
+        label: source.label,
+        required: !source.optional,
+        need: source.optional ? 0 : MIN,
+        shown: 0,
+        below: 0,
+        seen: 0,
+        rounds: 0,
+        status: 'running',
+        tried: [],
+        errors: [],
+      });
       emit('stage', { stage: `searching_${source.name}`, status: 'running' });
       const collector = new SourceCollector(source, ladder, {
         accept: gate.accept,
@@ -65,7 +86,11 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
         batch = batch.filter((v) => !gate.isNearDuplicate(v));
 
         emit('stage', { stage: 'scoring', status: 'running', detail: `${source.label}: ${batch.length} videos` });
-        const scores = await scorer({ product, analysis, candidates: batch.map((v) => ({ id: v.key, thumbBuf: v.thumbBuf, caption: v.caption, author: v.author })) });
+        const scores = await scorer({
+          product,
+          analysis,
+          candidates: batch.map((v) => ({ id: v.key, thumbBuf: v.thumbBuf, caption: v.caption, author: v.author })),
+        });
         for (const v of batch) {
           Object.assign(v, scores.get(v.key) || { score: 0, reason: 'Not scored' });
           v.band = v.band || band(v.score);
@@ -83,18 +108,32 @@ export async function runSearch({ searchId, input, emit = () => {}, deps = {} })
       r.errors = collector.errors;
       r.status = collector.fatal && r.shown === 0 ? 'failed' : r.shown >= target ? 'ok' : 'shortfall';
       if (r.status === 'shortfall') {
-        r.message = `Found ${r.shown} of ${target} matching videos after ${r.tried.length} queries (${r.below} more below the match threshold).`
-          + (collector.fatal ? ` Stopped: ${collector.fatal.message}.` : collector.exhausted ? ' All query variations were tried.' : ' Time limit reached.');
+        r.message =
+          `Found ${r.shown} of ${target} matching videos after ${r.tried.length} queries (${r.below} more below the match threshold).` +
+          (collector.fatal
+            ? ` Stopped: ${collector.fatal.message}.`
+            : collector.exhausted
+              ? ' All query variations were tried.'
+              : ' Time limit reached.');
       }
       if (r.status === 'failed') r.message = collector.fatal.message;
-      emit('stage', { stage: `searching_${source.name}`, status: r.status === 'ok' ? 'done' : r.status, detail: `${r.shown}/${target}` });
+      emit('stage', {
+        stage: `searching_${source.name}`,
+        status: r.status === 'ok' ? 'done' : r.status,
+        detail: `${r.shown}/${target}`,
+      });
     };
 
-    await Promise.allSettled(active.map((s) => runSource(s).catch((err) => {
-      logger.error({ err, source: s.name }, 'source crashed');
-      Object.assign(report[s.name], { status: 'failed', message: err.message });
-    })));
+    await Promise.allSettled(
+      active.map((s) =>
+        runSource(s).catch((err) => {
+          logger.error({ err, source: s.name }, 'source crashed');
+          Object.assign(report[s.name], { status: 'failed', message: err.message });
+        }),
+      ),
+    );
 
+    saveSeen(searchId, gate.seenList);
     const summary = { ...report, dedup: gate.stats, ms: Date.now() - started };
     const anyRequiredOk = active.some((s) => !s.optional && report[s.name].shown > 0);
     updateSearch(searchId, {

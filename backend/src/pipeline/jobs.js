@@ -13,12 +13,16 @@ const queue = new PQueue({ concurrency: config.MAX_CONCURRENT_SEARCHES });
 const jobs = new Map();
 let runner = runSearch;
 
-export const setRunner = (fn) => { runner = fn; }; // tests inject a fake pipeline
+export const setRunner = (fn) => {
+  runner = fn;
+}; // tests inject a fake pipeline
 export const getJob = (id) => jobs.get(id);
 export const queueStats = () => ({ running: queue.pending, waiting: queue.size });
 
 // searches that were running when the server stopped can never finish - mark them clearly
-db.prepare("UPDATE searches SET status = 'failed', error = 'Interrupted by a server restart - run the search again' WHERE status IN ('queued', 'running')").run();
+db.prepare(
+  "UPDATE searches SET status = 'failed', error = 'Interrupted by a server restart - run the search again' WHERE status IN ('queued', 'running')",
+).run();
 
 export function enqueue(searchId, input) {
   const job = { events: [], bus: new EventEmitter(), done: false };

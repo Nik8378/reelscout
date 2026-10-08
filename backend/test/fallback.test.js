@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { cleanTitle, fallbackAnalysis, queryLadder } from '../src/brain/analyze.js';
 
 describe('keyword fallback on messy marketplace titles', () => {
-  const product = { inputType: 'url', brand: 'RiteBite Max Protein', title: 'RiteBite Max Protein RiteBite Max Protein Ultimate Choco Almond 30gm Protein Bar (Pack of 1)' };
+  const product = {
+    inputType: 'url',
+    brand: 'RiteBite Max Protein',
+    title: 'RiteBite Max Protein RiteBite Max Protein Ultimate Choco Almond 30gm Protein Bar (Pack of 1)',
+  };
   it('cleans sizes, pack counts and brackets', () => {
     expect(cleanTitle(product.title)).toBe('RiteBite Max Protein RiteBite Max Protein Ultimate Choco Almond Protein Bar');
   });
