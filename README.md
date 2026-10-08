@@ -229,7 +229,7 @@ Full report with good, borderline and rejected examples per product: [docs/TEST-
 | Product | Input | Instagram | Meta | TikTok | Avg score | Notes |
 |---|---|---|---|---|---|---|
 | Oversized graphic tee | keyword | **23 / 20** | **26 / 20** | 30 | 70 | both minimums met |
-| Vitamin C face serum | keyword | **22 / 20** | 13 / 20 | 28 | 70 | Meta shortfall after 6 widened queries, reported in the UI |
+| Vitamin C face serum | keyword | **22 / 20** | 13 / 20 | 28 | 70 | Meta shortfall after 5 widened queries, reported in the UI |
 | Wireless earbuds | keyword | **24 / 20** | **24 / 20** | 0 | 72 | TikTok stopped: Apify free credit used up |
 | RiteBite protein bar | Amazon link | 0 / 20 | 0 / 20 | 0 | – | 402 duplicates removed: every match had been shown in earlier dev searches |
 | Allbirds Tree Runner | Shopify link | 0 / 20 | 6 / 20 | 0 | 54 | Apify credit ran out mid-run; free Meta collector kept working |
