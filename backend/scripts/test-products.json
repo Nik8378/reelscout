@@ -1,7 +1,7 @@
 [
-  { "q": "protein bar", "note": "keyword, food" },
   { "q": "oversized graphic tee", "note": "keyword, apparel" },
   { "q": "vitamin c face serum", "note": "keyword, skincare" },
-  { "q": "https://www.amazon.in/Ritebite-Max-Protein-Professional-Almond/dp/B0153O5XYU/ref=asc_df_B0153O5XYU?mcid=e4e9c548d48b3b699e2db451d9f97d12&tag=googleshopdes-21&linkCode=df0&hvadid=710052414637&hvpos=&hvnetw=g&hvrand=4567701593162574396&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9185243&hvtargid=pla-406359560058&hvocijid=4567701593162574396-B0153O5XYU-&hvexpln=0&gad_source=1&th=1", "note": "Amazon product link" },
+  { "q": "wireless earbuds", "note": "keyword, electronics" },
+  { "q": "https://www.amazon.in/dp/B0153O5XYU", "note": "Amazon product link (RiteBite)" },
   { "q": "https://www.allbirds.com/products/mens-tree-runners", "note": "Shopify product link" }
 ]

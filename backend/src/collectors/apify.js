@@ -32,7 +32,7 @@ export async function runActor(actorId, input, { timeoutSec = 110, maxItems } = 
     .catch((err) => { throw new SourceError('NETWORK', `Apify unreachable: ${err.cause?.code || err.message}`, true); });
 
   if (res.status === 401) throw new SourceError('AUTH', 'Apify token is invalid');
-  if (res.status === 402) throw new SourceError('NO_CREDIT', 'Apify free credit is used up for this month');
+  if (res.status === 402 || res.status === 403) throw new SourceError('NO_CREDIT', `Apify refused the request (HTTP ${res.status}) - free monthly credit used up`);
   if (res.status === 404) throw new SourceError('NO_ACTOR', `Apify actor ${actorId} not found`);
   if (res.status === 429) throw new SourceError('RATE_LIMIT', 'Apify rate limit hit', true);
   if (!res.ok && res.status !== 408) throw new SourceError('UPSTREAM', `Apify ${actorId} failed (HTTP ${res.status})`, res.status >= 500);
