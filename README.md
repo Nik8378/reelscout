@@ -6,7 +6,7 @@ from an image-analysis "brain". Repeat searches return **new** videos.
 
 **Stack:** Node.js (Express) · React (Vite) · SQLite · Gemini vision (free tier) + local CLIP · Playwright · Apify
 
-> Demo video: _add link_ · Test evidence: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) · Demo script: [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)
+> Demo video: _add link_ · Pipeline flow: _add link_ · Test evidence: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) · Demo script: [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)
 
 ---
 
@@ -33,12 +33,12 @@ cd frontend && npm install && npm run dev                                     # 
 | `APIFY_TOKEN` | apify.com → Settings → Integrations | Instagram Reels, TikTok, Meta fallback |
 
 Without keys the app still runs: Meta uses the free browser collector, and scoring falls back to local CLIP + caption signals.
-The UI says so instead of failing.
+The UI says so instead of failing. The first search downloads the CLIP model (~90 MB) once; later searches start immediately.
 
 ### Useful scripts (`backend/`)
 | Command | What it does |
 |---|---|
-| `npm test` | 30 tests: SSRF guard, product parsing, normalizers, de-dup, scoring, full pipeline (offline), API |
+| `npm test` | 32 tests: SSRF guard, product parsing, normalizers, de-dup, scoring, full pipeline (offline), API |
 | `npm run search -- "protein bar"` | Run one full search in the terminal |
 | `npm run brain -- "<url or name>"` | Show what the image brain extracts and the query plan |
 | `npm run collect -- "protein bar" meta` | Test a single source collector |
@@ -87,6 +87,11 @@ failing source never breaks the search.
 | **Instagram Reels** | Apify `instagram-hashtag-scraper` (Reels only) | Apify `instagram-scraper` on hashtag pages | Instagram has no public search API and hashtag pages need a login. A provider avoids running logged-in accounts, which would be a ToS risk. |
 | **Meta Ad Library** | **Free:** Playwright opens the *public* Ad Library page (no login, `media_type=video`) and reads the ads JSON the page itself loads, scrolling for more | Apify `facebook-ads-library-scraper` | The official Ad Library API only returns political/issue ads and EU-delivered ads, and it has no video URLs, so it can't meet this brief. |
 | **TikTok** (bonus) | Apify `tiktok-scraper` (keyword + hashtag search) | – | Behind its own toggle; never blocks the required sources |
+
+**TikTok from India.** TikTok's app and website are blocked in India (government order, 2020), so ReelScout never calls tiktok.com.
+The Apify actor runs on servers outside India and returns video ID, caption, creator, date and cover image; the backend only talks to
+api.apify.com. TikTok videos are scored like any other source, but are not streamed or re-hosted: the detail panel offers to copy the
+link instead. TikTok has its own toggle and no minimum, so it can never block the two required sources.
 
 **Query ladder (how we reach 20).** The brain turns the product into ordered queries, from exact to broad:
 exact name → brand + product type → **brand alone** (finds the brand's own ads) → descriptive ("black skull print oversized tee")
@@ -158,9 +163,10 @@ Two stages: cheap checks first, image checks after the thumbnail is downloaded.
 The pHash threshold was measured: copies (resized, JPEG-recompressed, 3% cropped) differ by ≤ 12 bits and usually ≤ 8;
 different images differ by ≥ 24. Captions are not used for Meta, because brands reuse the same copy across different creatives.
 
-Every returned video is stored with the search that returned it (`videos` + `search_results`). **Show previously seen** (a search
-option, and a filter on results) brings old videos back deliberately, flagged "Seen before". De-dup stats are shown per search
-("Duplicates removed").
+Every returned video is stored with the search that returned it (`videos` + `search_results`). When a new search meets a video
+from an earlier search, it is skipped (never re-scored, never counted toward the 20) and recorded with its earlier score as
+`previously_seen`. The **Show previously seen** filter brings those back deliberately, flagged "Seen before". A repeat keyword
+search therefore only shows new videos; the offline pipeline test asserts this. De-dup stats are shown per search ("Duplicates removed").
 
 ---
 
@@ -193,17 +199,35 @@ error JSON: `{ error: { code, message, hint } }`.
 
 ## Dashboard
 
-- Search bar for keyword or product URL (auto-detected), optional image upload, a TikTok toggle and an "include seen" toggle.
+- Search bar for keyword or product URL (auto-detected), optional image upload and a TikTok toggle.
 - Live pipeline bar: fetch → analyse → Instagram → Meta → TikTok → score, with live counts and the current query.
 - Summary tiles: per-source counts against the 20 minimum, average score, and duplicates removed.
 - Product panel: image, title, source, and the brain's attributes, distinctive features and queries.
 - Notices: shortfalls, failed sources, vision-model status, each with a next step.
-- Results: per-platform tabs with an `x/20` counter, score filter (All/50+/70+), "Show previously seen", sort by score or newest.
+- Results: per-platform tabs with an `x/20` counter, plus filters applied instantly to loaded results: text search (caption, creator,
+  reason), match level (exact / close / below threshold / all), posted date, sort (best, lowest, newest, oldest), "Show previously
+  seen" and "Shortlisted only".
 - Video cards: thumbnail, platform badge, score bar, verdict, reason, caption, author, date, link, shortlist.
 - Detail drawer: inline video player (or a link to the original), score breakdown and attribute checks.
 - History sidebar, shortlist CSV export, error/empty/offline states, and a layout that works on desktop and tablet.
 
 ---
+
+## Results (5 test products)
+
+Full report with good, borderline and rejected examples per product: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md).
+
+| Product | Input | Instagram | Meta | TikTok | Avg score | Notes |
+|---|---|---|---|---|---|---|
+| Oversized graphic tee | keyword | **23 / 20** | **26 / 20** | 30 | 70 | both minimums met |
+| Vitamin C face serum | keyword | **22 / 20** | 13 / 20 | 28 | 70 | Meta shortfall after 6 widened queries, reported in the UI |
+| Wireless earbuds | keyword | **24 / 20** | **24 / 20** | 0 | 72 | TikTok stopped: Apify free credit used up |
+| RiteBite protein bar | Amazon link | 0 / 20 | 0 / 20 | 0 | – | 402 duplicates removed: every match had been shown in earlier dev searches |
+| Allbirds Tree Runner | Shopify link | 0 / 20 | 6 / 20 | 0 | 54 | Apify credit ran out mid-run; free Meta collector kept working |
+
+What this shows: with provider credit available, keyword searches reliably reach 20 + 20 with average scores around 70. The two
+link searches were limited by the free Apify credit and by de-duplication against earlier searches, not by the pipeline; the
+UI reported both clearly. Gemini's free tier was overloaded during the run and the brain switched models automatically.
 
 ## Known limitations (honest)
 
