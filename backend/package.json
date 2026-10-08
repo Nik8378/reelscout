@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=../.env src/server.js",
     "start": "node --env-file-if-exists=../.env src/server.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "brain": "node --env-file-if-exists=../.env scripts/brain-check.js"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.1",
     "better-sqlite3": "^13.0.3",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
