@@ -506,9 +506,15 @@ const SITE = { instagram: 'Instagram', meta: 'Facebook', tiktok: 'TikTok' };
 
 export function Drawer({ v, onClose, saved, onToggleShort }) {
   const [videoFailed, setVideoFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
   if (!v) return null;
   const b = band(v.score);
   const canPlay = v.mediaUrl && !videoFailed;
+  const copyLink = () =>
+    navigator.clipboard
+      ?.writeText(v.url)
+      .then(() => setCopied(true))
+      .catch(() => window.prompt('Copy this TikTok link:', v.url));
   return (
     <div className="drawer-wrap" onClick={onClose}>
       <aside className="drawer" aria-label="Score details" onClick={(e) => e.stopPropagation()}>
@@ -532,15 +538,21 @@ export function Drawer({ v, onClose, saved, onToggleShort }) {
         ) : (
           <div className="player link">
             {v.thumbnail && <img src={v.thumbnail} alt="" />}
-            <a className="btn primary" href={v.url} target="_blank" rel="noreferrer">
-              <ExternalIcon /> Watch on {SITE[v.platform]}
-            </a>
+            {v.platform === 'tiktok' ? (
+              <button className="btn primary" onClick={copyLink}>
+                <ExternalIcon /> {copied ? 'Link copied' : 'Copy TikTok link'}
+              </button>
+            ) : (
+              <a className="btn primary" href={v.url} target="_blank" rel="noreferrer">
+                <ExternalIcon /> Watch on {SITE[v.platform]}
+              </a>
+            )}
           </div>
         )}
         {!canPlay && (
           <p className="muted sm">
             {v.platform === 'tiktok'
-              ? 'TikTok is blocked in India, so its videos cannot stream here. Data still arrives through the provider (servers outside India); set TIKTOK_DOWNLOAD_VIDEOS=true to keep a playable copy.'
+              ? 'tiktok.com is blocked in India (government order, 2020), so TikTok videos cannot play here. The cover, caption and match score come from the data provider. Copy the link to watch it where TikTok is available.'
               : videoFailed
                 ? "The platform's signed video link has expired - open the original instead."
                 : 'No direct video file for this item - open the original to watch.'}
