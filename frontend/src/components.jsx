@@ -156,17 +156,17 @@ export function Kpis({ data, live, min }) {
     <section className="kpis" aria-label="Summary">
       {tile(
         'Instagram Reels',
-        `${ig} / ${min}`,
+        ig >= min ? `${ig}` : `${ig} / ${min}`,
         (ig / min) * 100,
         ig >= min ? 'good' : 'warn',
-        ig >= min ? 'Minimum met' : 'Below minimum',
+        ig >= min ? `✓ Minimum ${min} met` : `${min - ig} short of ${min}`,
       )}
       {tile(
         'Meta video ads',
-        `${me} / ${min}`,
+        me >= min ? `${me}` : `${me} / ${min}`,
         (me / min) * 100,
         me >= min ? 'good' : 'warn',
-        me >= min ? 'Minimum met' : 'Below minimum',
+        me >= min ? `✓ Minimum ${min} met` : `${min - me} short of ${min}`,
       )}
       {tile('Average match score', avg ?? '–', avg ?? 0, 'blue', 'New videos only')}
       {tile('Duplicates removed', dedup ?? '–', dedup ? Math.min(100, dedup * 4) : 0, 'gray', 'Repeats, reposts, seen before')}
@@ -345,7 +345,7 @@ export function Results({ data, running, min, shortlist, onToggleShort, onOpen }
             >
               {PLATFORM_TAB[p]}
               <span className={`count ${p !== 'all' && p !== 'tiktok' ? (newCount(p) >= min ? 'good' : 'warn') : ''}`}>
-                {p === 'all' || p === 'tiktok' ? newCount(p) : `${newCount(p)}/${min}`}
+                {p === 'all' || p === 'tiktok' || newCount(p) >= min ? newCount(p) : `${newCount(p)}/${min}`}
               </span>
             </button>
           ))}
