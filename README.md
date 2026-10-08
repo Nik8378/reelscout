@@ -213,6 +213,15 @@ error JSON: `{ error: { code, message, hint } }`.
 
 ---
 
+## Testing
+
+- **32 automated tests** (`cd backend && npm test`): SSRF guard, product parsing, normalizers, de-duplication (incl. mirrored
+  re-uploads and the same ad under several IDs), scoring and fallbacks, the full pipeline offline, and the API.
+- **Live end-to-end runs** with real Instagram, Meta and TikTok data, including Gemini overload and provider credit running out.
+- **Manual UI checklist** for every dashboard feature.
+
+Details and what is still unchecked: [docs/TESTING.md](docs/TESTING.md).
+
 ## Results (5 test products)
 
 Full report with good, borderline and rejected examples per product: [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md).
