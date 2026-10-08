@@ -2,7 +2,11 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm ci --omit=dev \
+# retry dropped downloads instead of failing the whole build on a flaky connection
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm ci --omit=dev \
  && npx playwright install --with-deps chromium \
  && rm -rf /root/.npm
 COPY src ./src

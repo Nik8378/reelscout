@@ -45,14 +45,14 @@ Also verified: a **fresh clone** of the GitHub repo installs, passes all 32 test
 | 2 | Search by product link | Product title, image and brain attributes shown | ✅ |
 | 3 | Open a video card | Detail panel: reason, score breakdown, attribute checks | ✅ |
 | 4 | Layout at 1920, 1366, 1024 and 768 px | No overlap; sidebar becomes a menu below 1100 px | ✅ |
-| 5 | Search with only an uploaded image | Results from the photo (or a clear "add a product name" message if the vision model is busy) | ⬜ |
-| 6 | Filters: Match, Posted, Sort, text search | Results change instantly, "Showing X of Y" updates, Reset works | ⬜ |
-| 7 | Repeat a search, then Show previously seen | Old videos appear with a "Seen before" badge | ⬜ |
-| 8 | Bookmark 2 videos, Shortlisted only, Export shortlist | Only saved videos shown; CSV downloads | ⬜ |
-| 9 | Export CSV for a search | CSV with platform, score, reason, link, caption | ⬜ |
-| 10 | Click an old search in History | Results reload | ⬜ |
-| 11 | TikTok toggle off, then search | Only Instagram and Meta tabs | ⬜ |
-| 12 | Type `http://localhost:4000` as the product link | Red notice: internal addresses are blocked | ⬜ |
-| 13 | Stop the backend and refresh | "Backend not reachable" banner | ⬜ |
-| 14 | Phone width (about 400 px) | Filters fold behind a Filters button; no sideways scroll | ⬜ |
+| 5 | Search with only an uploaded image | Results from the photo (or a clear "add a product name" message if the vision model is busy) | ✅ |
+| 6 | Filters: Match, Posted, Sort, text search | Results change instantly, "Showing X of Y" updates, Reset works | ✅ |
+| 7 | Repeat a search, then Show previously seen | Old videos appear with a "Seen before" badge | ✅ |
+| 8 | Bookmark 2 videos, Shortlisted only, Export shortlist | Only saved videos shown; CSV downloads | ✅ |
+| 9 | Export CSV for a search | CSV with platform, score, reason, link, caption | ✅ |
+| 10 | Click an old search in History | Results reload | ✅ |
+| 11 | TikTok toggle off, then search | Only Instagram and Meta tabs | ✅ |
+| 12 | Type `http://localhost:4000` as the product link | Blocked before any fetch, with a clear red notice ("Only standard web ports are allowed" / "Internal addresses are blocked") | ✅ |
+| 13 | Stop the backend and refresh | "Backend not reachable" banner | ✅ |
+| 14 | Phone, tablet, laptop and desktop widths (Chrome device toolbar) | Filters fold behind a Filters button; no sideways scroll | ✅ |
 | 15 | `docker compose up --build` | App on http://localhost:8080 | ⬜ |
