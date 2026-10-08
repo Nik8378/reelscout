@@ -20,6 +20,15 @@ export function blendScore({ clip, llm }) {
   return Math.round(0.35 * clip + 0.65 * llm);
 }
 
+/**
+ * Score when the vision model is busy: 55% visual (CLIP) + 45% caption/author words.
+ * A post BY the brand or naming it is strong evidence, so it gets a floor of 60 (close match) plus up to 30 from visuals.
+ */
+export function fallbackScore({ clip, caption, byBrand }) {
+  const base = 0.55 * clip + 0.45 * caption;
+  return Math.round(byBrand ? Math.max(60 + 0.3 * clip, base) : base);
+}
+
 export function band(score) {
   if (score >= config.MATCH_THRESHOLD_EXACT) return 'exact';
   if (score >= config.MATCH_THRESHOLD_SHOW) return 'close';

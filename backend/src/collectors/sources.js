@@ -18,7 +18,7 @@ export const instagram = {
   name: 'instagram',
   label: 'Instagram Reels',
   plan({ keywords, hashtags }) {
-    const tags = uniq([...hashtags, ...keywords.map(toTag)]).filter((t) => t.length > 2 && t.length < 60);
+    const tags = uniq([...hashtags, ...keywords.slice(0, 4).map(toTag)]).filter((t) => t.length > 2 && t.length <= 30);
     return chunk(tags, 2).map((group) => ({ label: group.map((t) => `#${t}`).join(' '), tags: group }));
   },
   async run(task, limit) {

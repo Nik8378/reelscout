@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { geminiJson, geminiEnabled } from './gemini.js';
 import { embedImage, embedText, cosine, clipAvailable } from './clip.js';
-import { clipToScore, blendScore, band } from './scoring.js';
+import { clipToScore, blendScore, band, fallbackScore } from './scoring.js';
 import { readImage } from '../services/imageStore.js';
 import { cleanTitle } from './analyze.js';
 import { cache } from '../db.js';
@@ -71,10 +71,19 @@ export async function scoreCandidates({ product, analysis, candidates, onProgres
   if (await clipAvailable()) {
     try { ref = await productEmbedding(product, analysis); } catch (err) { logger.warn({ err: err.message }, 'reference embedding failed'); }
   }
+  let textRef = null;
+  if (ref?.mode === 'image') {
+    try { textRef = await embedText(`a photo of ${analysis.summary || product.title}`); } catch { /* optional signal */ }
+  }
   for (const c of withThumb) {
     let clipScore = null;
     if (ref) {
-      try { clipScore = clipToScore(cosine(ref.vec, await embedImage(c.thumbBuf)), ref.mode); } catch { /* bad image */ }
+      try {
+        const emb = await embedImage(c.thumbBuf);
+        clipScore = clipToScore(cosine(ref.vec, emb), ref.mode);
+        // text match is discounted (x0.85) so it can lift real-life shots without inflating category look-alikes
+        if (textRef) clipScore = Math.max(clipScore, Math.round(0.85 * clipToScore(cosine(textRef, emb), 'text')));
+      } catch { /* bad image */ }
     }
     out.set(c.id, { clipScore, llmScore: null, reason: null, checks: null });
   }
@@ -126,9 +135,13 @@ Caption hints (may be wrong): ${batch.map((c, i) => `${i + 1}: ${(c.caption || '
   for (const c of candidates) {
     const s = out.get(c.id) || { clipScore: null, llmScore: null };
     const capScore = captionScore(c.caption, c.author);
-    const score = s.llmScore == null && s.clipScore != null ? Math.round(0.55 * s.clipScore + 0.45 * capScore) : blendScore({ clip: s.clipScore, llm: s.llmScore });
+    const byBrand = brandKey.length > 2 && `${c.caption || ''} ${c.author || ''}`.toLowerCase().replace(/\s+/g, '').includes(brandKey);
+    const noVision = s.llmScore == null && s.clipScore != null;
+    const score = noVision
+      ? fallbackScore({ clip: s.clipScore, caption: capScore, byBrand })
+      : blendScore({ clip: s.clipScore, llm: s.llmScore });
     const reason = s.reason
-      || (s.clipScore != null ? `Visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model not used)` : 'No thumbnail available to compare');
+      || (s.clipScore != null ? `${byBrand ? `Posted by / mentions ${product.brand || analysis.brand} · ` : ''}visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model busy - not used)` : 'No thumbnail available to compare');
     out.set(c.id, { ...s, score, reason, band: band(score) });
   }
   return out;
