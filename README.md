@@ -204,7 +204,7 @@ error JSON: `{ error: { code, message, hint } }`.
 - Summary tiles: per-source counts against the 20 minimum, average score, and duplicates removed.
 - Product panel: image, title, source, and the brain's attributes, distinctive features and queries.
 - Notices: shortfalls, failed sources, vision-model status, each with a next step.
-- Results: per-platform tabs with an `x/20` counter, plus filters applied instantly to loaded results: text search (caption, creator,
+- Results: per-platform tabs with a live count and a "minimum met" label, plus filters applied instantly to loaded results: text search (caption, creator,
   reason), match level (exact / close / below threshold / all), posted date, sort (best, lowest, newest, oldest), "Show previously
   seen" and "Shortlisted only".
 - Video cards: thumbnail, platform badge, score bar, verdict, reason, caption, author, date, link, shortlist.
