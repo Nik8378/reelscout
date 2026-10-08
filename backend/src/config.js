@@ -7,7 +7,7 @@ const schema = z.object({
   DB_PATH: z.string().default('./data/reelscout.db'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   GEMINI_API_KEY: z.string().default(''),
-  GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+  GEMINI_MODEL: z.string().default('gemini-3.8-flash'),
   GEMINI_RPM: z.coerce.number().default(8),
   GEMINI_MAX_VERIFY: z.coerce.number().default(72),
   CLIP_MODEL: z.string().default('Xenova/clip-vit-base-patch32'),

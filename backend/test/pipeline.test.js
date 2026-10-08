@@ -6,6 +6,7 @@ import { band } from '../src/brain/scoring.js';
 
 const thumb = async (i) => `data:image/png;base64,${(await sharp(Buffer.from(Array.from({ length: 32 * 32 * 3 }, (_, k) => ((k * (i + 3) * 7) % 251))), { raw: { width: 32, height: 32, channels: 3 } }).png().toBuffer()).toString('base64')}`;
 
+const RUN = Date.now().toString(36);
 function fakeSource(name, total, { optional = false, fail = false } = {}) {
   let n = 0;
   return {
@@ -14,7 +15,7 @@ function fakeSource(name, total, { optional = false, fail = false } = {}) {
     async run(task, limit) {
       if (fail) throw Object.assign(new Error('blocked'), { code: 'AUTH' });
       const out = [];
-      for (let i = 0; i < limit && n < total; i++, n++) out.push({ platform: name, nativeId: `${name}${n}`, url: `https://x/${n}`, thumbnail: await thumb(n + name.length * 100), caption: `video ${n}`, mediaUrl: null });
+      for (let i = 0; i < limit && n < total; i++, n++) out.push({ platform: name, nativeId: `${RUN}${name}${n}`, url: `https://x/${n}`, thumbnail: await thumb(n + name.length * 100), caption: `video ${n}`, mediaUrl: null });
       return out;
     },
   };

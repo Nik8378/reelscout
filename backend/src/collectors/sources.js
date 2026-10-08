@@ -4,6 +4,8 @@ import { scrapeAdLibrary } from './metaBrowser.js';
 import { collectorEnv as env } from './env.js';
 import { logger } from '../logger.js';
 
+// some actors return hashtag pages with posts nested inside
+const flattenIg = (items) => items.flatMap((it) => (it.topPosts || it.latestPosts ? [...(it.topPosts || []), ...(it.latestPosts || [])] : [it]));
 const toTag = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 const uniq = (a) => [...new Set(a.filter(Boolean))];
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -23,7 +25,7 @@ export const instagram = {
     const per = Math.max(10, Math.ceil(limit / task.tags.length));
     try {
       const items = await runActor(env.IG_ACTOR, { hashtags: task.tags, resultsType: 'reels', resultsLimit: per }, { maxItems: per * task.tags.length });
-      const vids = items.map(normInstagram).filter(Boolean);
+      const vids = flattenIg(items).map(normInstagram).filter(Boolean);
       if (vids.length) return vids;
     } catch (err) {
       if (['NO_TOKEN', 'AUTH', 'NO_CREDIT'].includes(err.code)) throw err;
@@ -33,7 +35,7 @@ export const instagram = {
       directUrls: task.tags.map((t) => `https://www.instagram.com/explore/tags/${t}/`),
       resultsType: 'posts', resultsLimit: per, addParentData: false,
     }, { maxItems: per * task.tags.length * 2 });
-    return items.map(normInstagram).filter(Boolean);
+    return flattenIg(items).map(normInstagram).filter(Boolean);
   },
 };
 

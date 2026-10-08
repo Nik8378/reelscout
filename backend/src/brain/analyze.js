@@ -88,10 +88,15 @@ ${product.imageHash ? 'The product photo is attached.' : 'No photo is available:
   }
 }
 
-/** Ordered query ladder used by every collector: most specific first, broadest last */
+/** Ordered query ladder used by every collector: most specific first, broadest last, then widening variants */
 export function queryLadder(analysis, product) {
   const q = analysis.queries || {};
-  const ladder = [...(q.exact || []), product.inputType === 'keyword' ? product.title : null, ...(q.descriptive || []), ...(q.broad || [])]
-    .filter(Boolean).map((s) => s.trim()).filter((s, i, a) => s && a.findIndex((x) => x.toLowerCase() === s.toLowerCase()) === i);
-  return { keywords: ladder, hashtags: q.hashtags || [] };
+  const core = (q.broad?.[0] || analysis.productType || product.title || '').trim();
+  const shortTitle = (product.title || '').split(/[|,(–-]/)[0].trim();
+  const widen = core ? [`${core} review`, `best ${core}`, `${core} unboxing`] : [];
+  const keywords = [...(q.exact || []), product.inputType === 'keyword' ? product.title : shortTitle, ...(q.descriptive || []), ...(q.broad || []), ...widen]
+    .filter(Boolean).map((x) => x.trim()).filter((x, i, a) => x.length > 1 && a.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
+  const tag = (x) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  const hashtags = [...new Set([...(q.hashtags || []), ...keywords.slice(0, 4).map(tag), core && `${tag(core)}review`].filter((h) => h && h.length > 3))];
+  return { keywords, hashtags };
 }

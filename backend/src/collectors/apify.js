@@ -21,12 +21,15 @@ export async function runActor(actorId, input, { timeoutSec = 110, maxItems } = 
   url.searchParams.set('timeout', String(timeoutSec));
   if (maxItems) url.searchParams.set('maxItems', String(maxItems));
   const started = Date.now();
-  const res = await fetch(url, {
+  const send = () => fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.APIFY_TOKEN}` },
     body: JSON.stringify(input),
     signal: AbortSignal.timeout((timeoutSec + 20) * 1000),
-  }).catch((err) => { throw new SourceError('NETWORK', `Apify unreachable: ${err.message}`, true); });
+  });
+  const res = await send()
+    .catch(() => new Promise((r) => setTimeout(r, 2000)).then(send))
+    .catch((err) => { throw new SourceError('NETWORK', `Apify unreachable: ${err.cause?.code || err.message}`, true); });
 
   if (res.status === 401) throw new SourceError('AUTH', 'Apify token is invalid');
   if (res.status === 402) throw new SourceError('NO_CREDIT', 'Apify free credit is used up for this month');

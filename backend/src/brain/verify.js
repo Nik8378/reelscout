@@ -53,6 +53,12 @@ async function productEmbedding(product, analysis) {
  */
 export async function scoreCandidates({ product, analysis, candidates, onProgress = () => {} }) {
   const out = new Map();
+  const keyWords = [...new Set(`${product.title || ''} ${analysis.productType || ''} ${product.brand || ''}`.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2))];
+  const captionScore = (cap) => {
+    if (!keyWords.length) return 0;
+    const c = (cap || '').toLowerCase();
+    return Math.round((keyWords.filter((w) => c.includes(w)).length / keyWords.length) * 100);
+  };
   const withThumb = candidates.filter((c) => c.thumbBuf);
 
   // 1) CLIP
@@ -105,9 +111,10 @@ Caption hints (may be wrong): ${batch.map((c, i) => `${i + 1}: ${(c.caption || '
   // 3) blend + explain
   for (const c of candidates) {
     const s = out.get(c.id) || { clipScore: null, llmScore: null };
-    const score = blendScore({ clip: s.clipScore, llm: s.llmScore });
+    const capScore = captionScore(c.caption);
+    const score = s.llmScore == null && s.clipScore != null ? Math.round(0.75 * s.clipScore + 0.25 * capScore) : blendScore({ clip: s.clipScore, llm: s.llmScore });
     const reason = s.reason
-      || (s.clipScore != null ? `Visual similarity ${s.clipScore}/100 (not checked by vision model)` : 'No thumbnail available to compare');
+      || (s.clipScore != null ? `Visual similarity ${s.clipScore}/100, caption match ${capScore}/100 (vision model not used)` : 'No thumbnail available to compare');
     out.set(c.id, { ...s, score, reason, band: band(score) });
   }
   return out;

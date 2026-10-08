@@ -69,7 +69,7 @@ export class DedupGate {
         }
       }
     }
-    if (tokens.size >= 6) {
+    if (tokens.size >= 6 && v.platform !== 'meta') {
       for (const k of this.kept) {
         if (k.platform === v.platform && jaccard(tokens, k.tokens) >= CAPTION_DUP) { this.stats.repostCaption++; return true; }
       }
